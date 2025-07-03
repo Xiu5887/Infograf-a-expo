@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infografía: Procesos de Difusión en Ingeniería de Sistemas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- 
+    Plan de la Narrativa:
+    1.  Introducción: Captar la atención explicando qué es un proceso de difusión con una visualización de una trayectoria aleatoria.
+    2.  Fundamento Matemático: Desglosar la Ecuación Diferencial Estocástica (EDE) de forma visual.
+    3.  Caso de Estudio 1 (Congestión de Red): Aplicar los conceptos a un problema tangible, mostrando la ocupación de un búfer y las tasas de tráfico con gráficos de dona y barras.
+    4.  Caso de Estudio 2 (Filtro de Kalman): Visualizar el ciclo de predicción y corrección, y mostrar su efectividad con un gráfico de dispersión.
+    5.  Conclusión: Resumir la importancia y aplicaciones de estos procesos.
+
+    Selección de Visualizaciones (Confirmado SIN SVG / SIN Mermaid JS):
+    -   Trayectoria Aleatoria -> Line Chart (Chart.js) -> Objetivo: Mostrar Cambio. Justificación: Ideal para visualizar una variable que cambia continuamente en el tiempo.
+    -   Desglose de EDE -> HTML/CSS (Tailwind) -> Objetivo: Organizar. Justificación: Un diagrama de flujo con HTML/CSS es perfecto para mostrar los componentes de una fórmula.
+    -   Ocupación de Búfer -> Donut Chart (Chart.js) -> Objetivo: Informar. Justificación: Muestra una simple proporción (lleno vs. vacío) de forma clara.
+    -   Tasa de Llegada vs. Salida -> Bar Chart (Chart.js) -> Objetivo: Comparar. Justificación: Compara directamente dos métricas clave.
+    -   Ciclo Filtro de Kalman -> HTML/CSS (Tailwind) -> Objetivo: Organizar. Justificación: Un diagrama de proceso circular creado con HTML/CSS es efectivo y cumple las restricciones.
+    -   Rendimiento del Filtro -> Scatter Plot (Chart.js) -> Objetivo: Relaciones. Justificación: Muestra la correlación entre la trayectoria real, las mediciones ruidosas y la estimación filtrada.
+
+    Paleta de Colores Seleccionada: Energetic & Playful (#00A6FB, #F9C80E, #F28F3B, #FF5C5C, #3D348B) 
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            height: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .flow-arrow::after {
+            content: '→';
+            font-size: 2.5rem;
+            line-height: 1;
+            color: #F28F3B;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-black text-[#3D348B] mb-2">Visualizando la Incertidumbre</h1>
+            <p class="text-xl text-gray-600">Una Introducción a los Procesos de Difusión en Ingeniería de Sistemas</p>
+        </header>
+
+        <section class="mb-12 bg-white rounded-2xl shadow-lg p-6 md:p-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h2 class="text-3xl font-bold text-[#3D348B] mb-4">¿Qué es un Camino Aleatorio?</h2>
+                    <p class="mb-4">Un proceso de difusión modela un sistema que evoluciona de forma continua pero impredecible. Imagina una partícula en un fluido: se mueve constantemente, pero su trayectoria exacta es desconocida. Este "camino aleatorio" es el núcleo de muchos sistemas del mundo real, desde el precio de una acción hasta el movimiento de un robot.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-start"><span class="text-2xl mr-3 text-[#00A6FB]">📈</span><div><strong class="text-gray-900">Trayectorias Continuas:</strong> Sin saltos bruscos, el cambio es suave y constante.</div></div>
+                        <div class="flex items-start"><span class="text-2xl mr-3 text-[#00A6FB]">🧠</span><div><strong class="text-gray-900">Propiedad de Markov:</strong> El futuro solo depende del presente, no del pasado.</div></div>
+                        <div class="flex items-start"><span class="text-2xl mr-3 text-[#00A6FB]">↔️</span><div><strong class="text-gray-900">Espacio de Estado Continuo:</strong> La variable puede tomar cualquier valor en un rango, no solo valores discretos.</div></div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="randomWalkChart"></canvas>
+                </div>
+            </div>
+            <div class="mt-8 text-center">
+                <p class="text-gray-700 italic">El gráfico muestra una simulación de un proceso de difusión. Aunque existe una tendencia general (la deriva), el camino exacto es aleatorio (la difusión), ilustrando cómo el sistema evoluciona bajo incertidumbre.</p>
+            </div>
+        </section>
+        
+        <section class="mb-12 bg-white rounded-2xl shadow-lg p-6 md:p-8 text-center">
+            <h2 class="text-3xl font-bold text-[#3D348B] mb-2">La Ecuación que Describe el Azar</h2>
+            <p class="max-w-3xl mx-auto mb-8">Los procesos de difusión se describen con Ecuaciones Diferenciales Estocásticas (EDE). A diferencia de las ecuaciones tradicionales, una EDE tiene dos partes clave:</p>
+            <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4">
+                <div class="bg-[#00A6FB] text-white p-6 rounded-lg shadow-md w-full md:w-auto">
+                    <h3 class="text-2xl font-bold">Deriva (Drift)</h3>
+                    <p class="mt-1">μ(Xₜ, t)dt</p>
+                    <p class="mt-2 text-sm">La tendencia predecible o el comportamiento promedio del sistema. Es la dirección general del movimiento.</p>
+                </div>
+                <div class="text-5xl font-bold text-[#FF5C5C]">+</div>
+                <div class="bg-[#F9C80E] text-gray-800 p-6 rounded-lg shadow-md w-full md:w-auto">
+                    <h3 class="text-2xl font-bold">Difusión (Diffusion)</h3>
+                    <p class="mt-1">σ(Xₜ, t)dWₜ</p>
+                    <p class="mt-2 text-sm">La fuente de aleatoriedad o "ruido". Modela las fluctuaciones impredecibles alrededor de la tendencia.</p>
+                </div>
+                <div class="text-5xl font-bold text-[#FF5C5C]">=</div>
+                 <div class="bg-[#3D348B] text-white p-6 rounded-lg shadow-md w-full md:w-auto">
+                    <h3 class="text-2xl font-bold">Cambio Total</h3>
+                    <p class="mt-1">dXₜ</p>
+                    <p class="mt-2 text-sm">El cambio infinitesimal en el estado del sistema en un instante de tiempo.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold text-center text-[#3D348B] mb-6">Caso 1: Gestión de Congestión en Redes</h2>
+             <p class="text-center max-w-3xl mx-auto mb-8">Un router debe gestionar un búfer de paquetes cuyo nivel de ocupación fluctúa aleatoriamente con el tráfico de red. Un proceso de difusión nos ayuda a modelar y predecir su comportamiento para evitar la pérdida de datos.</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-4 text-center">Ocupación del Búfer en Tiempo Real</h3>
+                    <div class="chart-container h-[250px] md:h-[300px]">
+                        <canvas id="bufferDonutChart"></canvas>
+                    </div>
+                     <p class="text-center mt-4 text-sm italic">Este gráfico muestra la proporción del búfer que está actualmente en uso. El objetivo es mantener este valor por debajo del 100% para evitar la pérdida de paquetes.</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-4 text-center">Tasa de Llegada vs. Procesamiento</h3>
+                    <div class="chart-container h-[250px] md:h-[300px]">
+                        <canvas id="trafficBarChart"></canvas>
+                    </div>
+                    <p class="text-center mt-4 text-sm italic">Aquí comparamos la velocidad a la que llegan los paquetes (λ) con la velocidad a la que el router los procesa (ρ). Si λ > ρ de forma sostenida, la deriva es positiva y el búfer se llenará.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold text-center text-[#3D348B] mb-6">Caso 2: Precisión con el Filtro de Kalman</h2>
+            <p class="text-center max-w-3xl mx-auto mb-8">Un dron necesita saber su posición exacta, pero sus sensores (GPS) son ruidosos. El Filtro de Kalman usa un proceso de difusión para predecir el movimiento del dron y luego corrige esa predicción con los datos del sensor, logrando una estimación increíblemente precisa.</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-4 text-center">El Ciclo de Estimación</h3>
+                    <div class="flex flex-col items-center justify-center space-y-4">
+                        <div class="text-center p-4 bg-blue-100 border-2 border-blue-300 rounded-full w-48">
+                            <h4 class="font-bold text-blue-800">1. Predecir</h4>
+                            <p class="text-xs text-blue-700">Usar el modelo de difusión para estimar el próximo estado.</p>
+                        </div>
+                        <div class="text-4xl text-gray-400 transform -rotate-90 md:transform-none md:rotate-0">↓</div>
+                        <div class="text-center p-4 bg-green-100 border-2 border-green-300 rounded-full w-48">
+                            <h4 class="font-bold text-green-800">2. Actualizar</h4>
+                            <p class="text-xs text-green-700">Corregir la predicción con la medición ruidosa del sensor.</p>
+                        </div>
+                    </div>
+                     <p class="text-center mt-6 text-sm italic">Este ciclo continuo permite al filtro converger en una estimación muy precisa del estado real del sistema, a pesar del ruido inherente.</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-4 text-center">Rendimiento del Filtro</h3>
+                    <div class="chart-container">
+                        <canvas id="kalmanScatterChart"></canvas>
+                    </div>
+                    <p class="text-center mt-4 text-sm italic">El gráfico muestra cómo la estimación del filtro (naranja) sigue de cerca la trayectoria real (azul oscuro), ignorando eficazmente el ruido de las mediciones del sensor (amarillo claro).</p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <footer class="text-center p-6 bg-white mt-12 border-t">
+        <p class="text-gray-600">Infografía creada para visualizar los conceptos de procesos de difusión.</p>
+        <p class="text-sm text-gray-400 mt-1">Diseño y desarrollo sin uso de SVG o Mermaid JS.</p>
+    </footer>
+
+    <script>
+        const FONT_COLOR = '#374151';
+        const GRID_COLOR = '#E5E7EB';
+
+        function processLabel(label, maxLength = 16) {
+            if (label.length <= maxLength) {
+                return label;
+            }
+            const words = label.split(' ');
+            let lines = [];
+            let currentLine = '';
+            for (const word of words) {
+                if ((currentLine + ' ' + word).trim().length > maxLength) {
+                    lines.push(currentLine.trim());
+                    currentLine = word;
+                } else {
+                    currentLine = (currentLine + ' ' + word).trim();
+                }
+            }
+            if (currentLine) {
+                lines.push(currentLine.trim());
+            }
+            return lines;
+        }
+
+        const tooltipTitleCallback = (tooltipItems) => {
+            const item = tooltipItems[0];
+            let label = item.chart.data.labels[item.dataIndex];
+            if (Array.isArray(label)) {
+                return label.join(' ');
+            }
+            return label;
+        };
+        
+        const SHARED_CHART_OPTIONS = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: FONT_COLOR,
+                        font: {
+                           family: "'Inter', sans-serif"
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: tooltipTitleCallback
+                    },
+                    titleFont: {
+                        family: "'Inter', sans-serif",
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                       family: "'Inter', sans-serif"
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { 
+                        color: FONT_COLOR,
+                        font: { family: "'Inter', sans-serif" }
+                    },
+                    grid: { color: GRID_COLOR }
+                },
+                y: {
+                    ticks: { 
+                        color: FONT_COLOR,
+                        font: { family: "'Inter', sans-serif" }
+                    },
+                    grid: { color: GRID_COLOR }
+                }
+            }
+        };
+
+        const SHARED_CHART_OPTIONS_NO_AXES = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                     labels: {
+                        color: FONT_COLOR,
+                        font: {
+                           family: "'Inter', sans-serif"
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: tooltipTitleCallback
+                    },
+                     titleFont: {
+                        family: "'Inter', sans-serif",
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                       family: "'Inter', sans-serif"
+                    }
+                }
+            }
+        };
+
+        function generateRandomWalkData(steps = 50, drift = 0.1, diffusion = 1) {
+            let data = [0];
+            for (let i = 1; i < steps; i++) {
+                const randomShock = (Math.random() - 0.5) * 2 * diffusion;
+                const nextValue = data[i - 1] + drift + randomShock;
+                data.push(nextValue);
+            }
+            return data;
+        }
+
+        new Chart(document.getElementById('randomWalkChart'), {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: 50 }, (_, i) => i + 1),
+                datasets: [{
+                    label: 'Trayectoria Aleatoria',
+                    data: generateRandomWalkData(),
+                    borderColor: '#00A6FB',
+                    backgroundColor: 'rgba(0, 166, 251, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: { ...SHARED_CHART_OPTIONS,
+                scales: {
+                    x: { ...SHARED_CHART_OPTIONS.scales.x, title: { display: true, text: 'Tiempo', color: FONT_COLOR } },
+                    y: { ...SHARED_CHART_OPTIONS.scales.y, title: { display: true, text: 'Valor del Estado', color: FONT_COLOR } }
+                }
+             }
+        });
+        
+        new Chart(document.getElementById('bufferDonutChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Ocupado', 'Libre'],
+                datasets: [{
+                    label: 'Ocupación del Búfer',
+                    data: [78, 22],
+                    backgroundColor: ['#F28F3B', '#E9D8A6'],
+                    borderColor: '#FFFFFF',
+                    borderWidth: 4,
+                }]
+            },
+            options: { ...SHARED_CHART_OPTIONS_NO_AXES, cutout: '60%' }
+        });
+
+        new Chart(document.getElementById('trafficBarChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Tasa de Tráfico'],
+                datasets: [
+                    {
+                        label: 'Llegada (λ)',
+                        data: [95],
+                        backgroundColor: '#FF5C5C',
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Procesamiento (ρ)',
+                        data: [85],
+                        backgroundColor: '#00A6FB',
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: { ...SHARED_CHART_OPTIONS,
+                scales: {
+                    x: { ...SHARED_CHART_OPTIONS.scales.x, grid: { display: false }, ticks: { display: false } },
+                    y: { ...SHARED_CHART_OPTIONS.scales.y, title: { display: true, text: 'Paquetes/seg', color: FONT_COLOR } }
+                }
+             }
+        });
+
+        function generateKalmanData() {
+            let truePath = [];
+            let measurements = [];
+            let kalmanFilter = [];
+            let P = 1.0; 
+            const Q = 0.1; 
+            const R = 4.0; 
+            let x_hat = 0;
+
+            for (let t = 0; t < 20; t++) {
+                const true_val = Math.sin(t * 0.5) * 10;
+                truePath.push({x: t, y: true_val});
+                
+                const measurement = true_val + (Math.random() - 0.5) * 4;
+                measurements.push({x: t, y: measurement});
+                
+                const x_hat_minus = x_hat;
+                const P_minus = P + Q;
+                
+                const K = P_minus / (P_minus + R);
+                x_hat = x_hat_minus + K * (measurement - x_hat_minus);
+                P = (1 - K) * P_minus;
+                
+                kalmanFilter.push({x: t, y: x_hat});
+            }
+            return { truePath, measurements, kalmanFilter };
+        }
+        const kalmanData = generateKalmanData();
+        new Chart(document.getElementById('kalmanScatterChart'), {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        label: 'Trayectoria Real',
+                        data: kalmanData.truePath,
+                        borderColor: '#3D348B',
+                        backgroundColor: '#3D348B',
+                        showLine: true,
+                        pointRadius: 0,
+                        borderWidth: 3
+                    },
+                     {
+                        label: 'Estimación del Filtro',
+                        data: kalmanData.kalmanFilter,
+                        borderColor: '#F28F3B',
+                        backgroundColor: '#F28F3B',
+                        showLine: true,
+                        pointRadius: 0,
+                        borderWidth: 3,
+                        borderDash: [5, 5]
+                    },
+                    {
+                        label: 'Mediciones Ruidosas',
+                        data: kalmanData.measurements,
+                        backgroundColor: '#F9C80E',
+                        pointRadius: 5
+                    }
+                ]
+            },
+            options: { ...SHARED_CHART_OPTIONS,
+                 scales: {
+                    x: { ...SHARED_CHART_OPTIONS.scales.x, title: { display: true, text: 'Tiempo', color: FONT_COLOR } },
+                    y: { ...SHARED_CHART_OPTIONS.scales.y, title: { display: true, text: 'Posición', color: FONT_COLOR } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
